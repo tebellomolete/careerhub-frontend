@@ -1,36 +1,106 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# CareerHub Frontend - Assignment 1.1
 
-## Getting Started
+## Part 1: Written Decisions
 
-First, run the development server:
+### 1. Lifting State Up
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+**What breaks if `JobList` owns the state:**
+If we store `selectedId` inside `JobList`, the `Home` page has no way to access that information. Data in React flows downwards (from parent to child). If `Home` needs to show a summary panel with the selected job's title, it cannot reach into `JobList` to grab that state. The summary panel would break.
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+**The nearest common ancestor rule:**
+This rule says that if two components (like the Summary Panel and `JobList`) need to share the same piece of data, that data should be placed in the parent component that wraps them both. In our case, `Home` is the parent of both, so putting the state in `Home` guarantees we can pass the data down to both successfully.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+**The data flow cycle:**
+1. A user clicks a `JobCard`.
+2. The `JobCard` triggers its `onSelect` prop.
+3. This calls the `setSelectedId` function living up in the `Home` component.
+4. `Home` updates its state, which causes it to re-render.
+5. `Home` passes the newly selected job data down to the Summary Panel (making it appear) and the new `selectedId` down to `JobList` to highlight the correct card.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### 2. The Re-render Cycle
 
-## Learn More
+**Confirming the colleague's claim:** The colleague is technically correct. By default, calling `setSelectedId` causes all the `JobCard` components to re-render.
 
-To learn more about Next.js, take a look at the following resources:
+* **What React does immediately:** When `setSelectedId` is called, React flags the `Home` component as needing an update because its state changed.
+* **Why unchanged props still re-render:** In React, when a parent component (`Home`) re-renders, it automatically re-renders all of its children (`JobList` and `JobCard`), even if the specific props passed to a `JobCard` did not change.
+* **React 19 compiler mechanism:** The new React 19 compiler introduces automatic memoization. It is smart enough to look at a component, realize its props haven't changed, and automatically skip re-rendering it without us having to write extra code.
+* **Re-renders vs DOM updates:** A "re-render" just means React runs the component's code to see *if* anything looks different. A "DOM update" is when React actually changes what is drawn on the screen in the browser. React only performs a DOM update if the re-render produces a visually different result. This distinction matters because checking for changes (re-rendering) is very fast, but actually redrawing the browser screen (DOM updating) is slow.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### 3. Union Types versus String
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Using a union type (`"FullTime" | "PartTime" | "Contract" | "Internship"`) is much safer than using a basic `string`. 
 
-## Deploy on Vercel
+**Scenario 1: A simple typo**
+If we use a string and a developer accidentally types `"Fulltime"` (lowercase 't'), TypeScript allows it. However, our Tailwind color dictionary might not recognize it, leaving the badge without styles. 
+* **Error:** Missing styles (silent bug). 
+* **Caught:** Too late, likely in the browser during testing. 
+* **With Union:** TypeScript throws a compile error in the code editor immediately, saying `"Fulltime"` is not assignable to the union type.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+**Scenario 2: The API adds "Freelance"**
+If the backend adds `"Freelance"` and we haven't updated our frontend union type yet.
+* **Error:** When we try to map colors in `badgeStyles`, TypeScript will immediately complain that `"Freelance"` is missing from our dictionary. 
+* **Caught:** At compile time (during development or build). We cannot even build the app until we handle the new type, preventing a live app from crashing when encountering unexpected data. 
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### 4. The && Rendering Trap
+
+**Why 0 renders in the browser:**
+In JavaScript, the number `0` is considered "falsy". When React evaluates `{job.applicantCount && <p>...`, it checks the left side. Because `0` is a falsy non-boolean value, JavaScript stops checking the right side and simply returns the value `0`. React sees the number `0` and renders it directly onto the screen as text.
+
+**Correct Solutions:**
+1. `{job.applicantCount > 0 && <p>...}` (Checks if it is strictly greater than 0, resulting in a true/false boolean).
+2. `{job.applicantCount ? <p>... : null}` (Uses a ternary operator).
+
+**Preference:** I prefer the first solution (`> 0 &&`) because it explicitly forces the evaluation to become a true `boolean` (`false`). React completely ignores boolean values, so it safely renders nothing, and the code is shorter to read.
+
+---
+
+## README Updates
+
+### 1. Why Static Data First
+
+Building against hardcoded data before connecting to a live API is the correct approach because it allows us to perfect our User Interface (UI) decisions without interference. We don't have to worry about slow internet, server crashes, or backend bugs slowing down our frontend work. 
+
+A component that is "data-source agnostic" means the component does not care where its data comes from. Whether the data is passed from a local hardcoded array or a live web server, the component takes the props and renders the exact same way. 
+
+### 2. Type Contract with the Backend
+
+Our `JobListing` interface in `src/types/index.ts` is a direct mirror of the `JobListingResponse.cs` file on the backend. 
+
+If a backend developer renames `salaryMin` to `minimumSalary` and generates a new TypeScript client for us, our `JobListing` interface will update to expect `minimumSalary`. Instantly, every single component in our frontend that still tries to read `job.salaryMin` will light up with a red TypeScript compilation error. The app will refuse to build, forcing us to fix the mismatches before the code ever reaches the user.
+
+### 3. Component Responsibility Table
+
+| Component | Owns state | Receives via props |
+| :--- | :--- | :--- |
+| **Home** | `selectedId` (string \| null) | *(None)* |
+| **JobList** | *(None)* | `jobs` (JobListing[]), `selectedId` (string \| null), `onSelect` (callback function) |
+| **JobCard** | *(None)* | `job` (JobListing), `isSelected` (boolean), `onSelect` (callback function) |
+
+### 4. Gate
+
+The project builds successfully with zero TypeScript errors and zero ESLint errors. 
+
+```text
+> careerhub-frontend@0.1.0 build
+> next build
+
+   ▲ Next.js 15.0.0
+   - Environments: .env
+
+ ✓ Linting and checking validity of types    
+ ✓ Creating an optimized production build    
+ ✓ Compiled successfully
+ ✓ Collecting page data    
+ ✓ Generating static pages (5/5)
+ ✓ Collecting build traces    
+ ✓ Finalizing page optimization    
+
+Route (app)                              Size     First Load JS
+┌ ○ /                                    184 B          87.5 kB
+└ ○ /_not-found                          871 B          88.2 kB
++ First Load JS shared by all            87.3 kB
+  ├ chunks/23-1f14371719ab2662.js        31.5 kB
+  ├ chunks/fd9d1056-2821b0f0cabcd8bd.js  53.6 kB
+  └ other shared chunks (empty)
+
+○  (Static)  prerendered as static content
