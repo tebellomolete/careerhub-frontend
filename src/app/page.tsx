@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { JobListing } from "@/types";
 import JobList from "@/components/JobList";
 
@@ -84,6 +84,35 @@ export default function Home() {
   // Lifted state: Home owns the selected ID, as argued in Part 1
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
+  // --- State Persistence (SessionStorage) ---
+
+  // Effect 1: Read from sessionStorage strictly on mount.
+  // Separation rationale: We only want to read from storage when the component first mounts.
+  // If we combined read/write, we might accidentally overwrite a valid selectedId with a stale storage value on subsequent re-renders.
+  // Dependency array is empty [] to ensure this runs exactly once.
+  useEffect(() => {
+    const storedId = sessionStorage.getItem("selectedJobId");
+    if (storedId) {
+      // Ignore stale IDs by ensuring it exists in our current data
+      const isValid = MOCK_JOBS.some(job => job.id === storedId);
+      if (isValid) {
+        setSelectedId(storedId);
+      }
+    }
+  }, []); // Runs exactly once on mount
+
+  // Effect 2: Write to sessionStorage whenever selectedId changes.
+  // Separation rationale: Writing is reactive to state changes. 
+  // Putting this in a separate effect guarantees it only fires when selectedId actually updates.
+  // Dependency array contains [selectedId] so it synchronizes storage with React state.
+  useEffect(() => {
+    if (selectedId) {
+      sessionStorage.setItem("selectedJobId", selectedId);
+    } else {
+      sessionStorage.removeItem("selectedJobId");
+    }
+  }, [selectedId]); // Runs whenever selectedId changes
+
   // Requirement: Clicking an already selected card deselects it
   const handleSelectJob = (id: string) => {
     setSelectedId((prevId) => (prevId === id ? null : id));
@@ -95,10 +124,10 @@ export default function Home() {
   return (
     <main className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">
+        <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight dark:text-gray-100">
           CareerHub
         </h1>
-        <p className="mt-2 text-sm text-gray-500">
+        <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
           Find your next role in South Africa's tech industry.
         </p>
       </div>
@@ -108,12 +137,12 @@ export default function Home() {
         rather than just hiding it with CSS. 
       */}
       {selectedJob && (
-        <div className="mb-8 bg-blue-50 border border-blue-200 rounded-lg p-6 shadow-sm">
-          <h2 className="text-sm font-semibold text-blue-600 uppercase tracking-wider mb-1">
+        <div className="mb-8 bg-blue-50 border border-blue-200 rounded-lg p-6 shadow-sm dark:bg-blue-900/20 dark:border-blue-800">
+          <h2 className="text-sm font-semibold text-blue-600 uppercase tracking-wider mb-1 dark:text-blue-400">
             Currently Selected
           </h2>
-          <h3 className="text-xl font-bold text-gray-900">{selectedJob.title}</h3>
-          <p className="text-gray-700 mt-1">{selectedJob.company}</p>
+          <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100">{selectedJob.title}</h3>
+          <p className="text-gray-700 mt-1 dark:text-gray-300">{selectedJob.company}</p>
         </div>
       )}
 

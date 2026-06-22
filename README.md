@@ -104,3 +104,26 @@ Route (app)                              Size     First Load JS
   └ other shared chunks (empty)
 
 ○  (Static)  prerendered as static content
+```
+
+### 5. The shadcn/ui Ownership Model
+Unlike traditional component libraries (like Material UI or Bootstrap) where you install the components as npm modules, shadcn/ui installs the raw source code directly into your project (`src/components/ui/`). We completely own this code. If the original library updates and introduces a breaking change, our project is unaffected because our local source code remains untouched until we explicitly decide to update or modify it ourselves.
+
+### 6. Why the `cn` Utility Exists
+The `cn` utility combines `clsx` (for conditional classes) and `tailwind-merge` (for conflict resolution). If we used plain string concatenation like `` `p-4 ${isSelected ? 'p-6' : ''}` ``, Tailwind wouldn't know which padding to apply because both `p-4` and `p-6` would exist on the element. The `cn` utility parses these conflicts and intelligently strips out `p-4`, leaving only `p-6`. This allows us to define default styles and cleanly override them without CSS specificity bugs.
+
+### 7. Event Handler vs `useEffect`
+We placed our `sessionStorage` logic inside a `useEffect` rather than inside the `handleSelectJob` click handler. If we only wrote to storage on click, our storage would become out of sync if `selectedId` was changed by another mechanism (e.g., clearing the selection via a keyboard shortcut, or a "clear filters" button elsewhere in the app). By using `useEffect` tied to the `selectedId` state, we guarantee that *any* change to the state—regardless of what caused it—is synchronized to storage.
+
+### 8. Source of Truth for Dark Mode
+While we track `isDark` in React state to update the toggle button's text, the actual "source of truth" for the application's appearance is the DOM—specifically, the presence of the `dark` class on the `<html>` (`document.documentElement`) element. React state simply observes and controls this DOM class, but Tailwind applies the dark mode styling purely based on the DOM's class list.
+
+### 9. Component Extraction Rationale
+We extracted `JobStatusBadge` to adhere to the Single Responsibility Principle. `JobCard`'s primary responsibility is to lay out the information of a job. It shouldn't also have to contain the complex business logic of mapping employment types to specific color dictionaries and deciding when an "Expired" badge should appear. Extracting this logic into `JobStatusBadge` makes `JobCard` cleaner and allows the badge logic to be reused elsewhere (like a Job Details page).
+
+### 10. Effect Responsibilities Table
+
+| Effect Purpose | Dependency Array | When It Runs | Why Merging Breaks the App |
+| :--- | :--- | :--- | :--- |
+| **Read from Storage** | `[]` (Empty) | Exactly once, only when the `Home` component first mounts. | If merged, the read logic would run every time the state changes. It would immediately overwrite the user's new selection by reading the old, stale ID back out of `sessionStorage` before the new one could be saved. |
+| **Write to Storage** | `[selectedId]` | Whenever `selectedId` changes (after the initial mount). | If merged, it would be impossible to satisfy both timing requirements. A missing dependency array runs on every single render (causing infinite loops or performance issues), and an empty one never saves updates. |

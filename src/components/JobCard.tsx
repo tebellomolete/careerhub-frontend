@@ -1,4 +1,6 @@
-import { JobListing, EmploymentType } from "@/types";
+import { JobListing } from "@/types";
+import { cn } from "@/lib/utils";
+import JobStatusBadge from "./JobStatusBadge";
 
 interface JobCardProps {
   job: JobListing;
@@ -21,14 +23,6 @@ function getRelativeTime(dateString: string): string {
   return `${diffMonths} month${diffMonths > 1 ? "s" : ""} ago`;
 }
 
-// Map the union type to visually distinct Tailwind classes
-const badgeStyles: Record<EmploymentType, string> = {
-  FullTime: "bg-blue-100 text-blue-800",
-  PartTime: "bg-green-100 text-green-800",
-  Contract: "bg-orange-100 text-orange-800",
-  Internship: "bg-purple-100 text-purple-800",
-};
-
 export default function JobCard({ job, isSelected, onSelect }: JobCardProps) {
   // Format numbers with spaces for ZA locale
   const formatSalary = (amount: number) => amount.toLocaleString("en-ZA");
@@ -36,39 +30,30 @@ export default function JobCard({ job, isSelected, onSelect }: JobCardProps) {
   return (
     <div
       onClick={() => onSelect(job.id)}
-      className={`p-5 rounded-lg border cursor-pointer transition-all ${
-        isSelected
-          ? "border-blue-600 bg-blue-50 ring-1 ring-blue-600"
-          : "border-gray-200 bg-white hover:border-gray-300 hover:shadow-sm"
-      }`}
+      className={cn(
+        "p-5 rounded-lg border cursor-pointer transition-all",
+        // Selected state styling
+        isSelected && "border-blue-600 bg-blue-50 ring-1 ring-blue-600 dark:bg-blue-900/20 dark:border-blue-500 dark:ring-blue-500",
+        // Default styling (active & unselected)
+        !isSelected && job.isActive && "border-gray-200 bg-white hover:border-gray-300 hover:shadow-sm dark:bg-gray-800 dark:border-gray-700 dark:hover:border-gray-600",
+        // Expired styling (inactive & unselected) visually distinct
+        !isSelected && !job.isActive && "border-gray-200 bg-gray-50 opacity-75 hover:border-gray-300 dark:bg-gray-900 dark:border-gray-800 dark:hover:border-gray-700"
+      )}
     >
       <div className="flex justify-between items-start mb-2">
-        <h2 className="text-xl font-bold text-gray-900">{job.title}</h2>
-        
-        {/* Render Expired badge only if isActive is false */}
-        {!job.isActive && (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-            Expired
-          </span>
-        )}
+        <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">{job.title}</h2>
       </div>
 
-      <p className="text-sm text-gray-600 mb-4">
+      <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
         {job.company} &middot; {job.location}
       </p>
 
       <div className="flex flex-wrap gap-2 mb-4">
-        <span
-          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-            badgeStyles[job.employmentType]
-          }`}
-        >
-          {job.employmentType}
-        </span>
-        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+        <JobStatusBadge employmentType={job.employmentType} isActive={job.isActive} />
+        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200">
           R{formatSalary(job.salaryMin)} - R{formatSalary(job.salaryMax)} pm
         </span>
-        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200">
           {getRelativeTime(job.postedAt)}
         </span>
       </div>
@@ -77,7 +62,7 @@ export default function JobCard({ job, isSelected, onSelect }: JobCardProps) {
         when the count is 0, addressing the trap mentioned in Part 1 of the spec. 
       */}
       {job.applicantCount > 0 && (
-        <p className="text-sm text-gray-500 font-medium">
+        <p className="text-sm text-gray-500 font-medium dark:text-gray-400">
           {job.applicantCount} applicant{job.applicantCount !== 1 ? "s" : ""}
         </p>
       )}
