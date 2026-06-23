@@ -7,81 +7,7 @@ import { useQuery } from "@tanstack/react-query";
 import { fetchJobs } from "@/lib/api";
 import { JobListSkeleton } from "@/components/JobCardSkeleton";
 
-// Hardcoded mock data strictly matching the JobListing interface
-const MOCK_JOBS: JobListing[] = [
-  {
-    id: "a1b2c3d4-e5f6-7890-1234-56789abcdef0",
-    title: "Junior Backend Developer (.NET Core)",
-    company: "Bitcube",
-    location: "Bloemfontein",
-    employmentType: "FullTime",
-    salaryMin: 25000,
-    salaryMax: 35000,
-    postedAt: new Date().toISOString(), // Posted today
-    isActive: true,
-    applicantCount: 14,
-  },
-  {
-    id: "b2c3d4e5-f6a7-8901-2345-6789abcdef01",
-    title: "Frontend Web Developer (React)",
-    company: "TechBridge Solutions",
-    location: "Remote",
-    employmentType: "Contract",
-    salaryMin: 40000,
-    salaryMax: 60000,
-    postedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), // 2 days ago
-    isActive: true,
-    applicantCount: 0, // Requirement: At least one with 0 applicants
-  },
-  {
-    id: "c3d4e5f6-a7b8-9012-3456-789abcdef012",
-    title: "Software Development Intern",
-    company: "Innovate Pretoria",
-    location: "Pretoria",
-    employmentType: "Internship",
-    salaryMin: 8000,
-    salaryMax: 12000,
-    postedAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(),
-    isActive: false, // Requirement: At least one inactive
-    applicantCount: 89,
-  },
-  {
-    id: "d4e5f6a7-b8c9-0123-4567-89abcdef0123",
-    title: "Database Administrator (PostgreSQL)",
-    company: "DataSys SA",
-    location: "Johannesburg",
-    employmentType: "FullTime",
-    salaryMin: 55000,
-    salaryMax: 75000,
-    postedAt: new Date(Date.now() - 45 * 24 * 60 * 60 * 1000).toISOString(), // Requirement: > 30 days ago
-    isActive: true,
-    applicantCount: 5,
-  },
-  {
-    id: "e5f6a7b8-c9d0-1234-5678-9abcdef01234",
-    title: "IT Support Specialist",
-    company: "Spur Corporation",
-    location: "Cape Town",
-    employmentType: "PartTime",
-    salaryMin: 15000,
-    salaryMax: 22000,
-    postedAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-    isActive: true,
-    applicantCount: 42,
-  },
-  {
-    id: "f6a7b8c9-d0e1-2345-6789-abcdef012345",
-    title: "Senior Full Stack Engineer",
-    company: "FinTech Africa",
-    location: "Remote",
-    employmentType: "FullTime",
-    salaryMin: 80000,
-    salaryMax: 110000,
-    postedAt: new Date().toISOString(), // Posted today
-    isActive: true,
-    applicantCount: 3,
-  }
-];
+// Hardcoded mock data has been moved to src/app/api/jobs/route.ts
 
 export default function Home() {
   const {
@@ -107,11 +33,8 @@ export default function Home() {
   useEffect(() => {
     const storedId = sessionStorage.getItem("selectedJobId");
     if (storedId) {
-      // Ignore stale IDs by ensuring it exists in our current data
-      const isValid = MOCK_JOBS.some(job => job.id === storedId);
-      if (isValid) {
-        setSelectedId(storedId);
-      }
+      // Trust the stored ID initially, validation will happen implicitly if the ID is missing from fetched jobs
+      setSelectedId(storedId);
     }
   }, []); // Runs exactly once on mount
 
@@ -133,7 +56,7 @@ export default function Home() {
   };
 
   // Find the full job object for the summary panel
-  const selectedJob = MOCK_JOBS.find((job) => job.id === selectedId);
+  const selectedJob = jobs?.find((job) => job.id === selectedId);
 
   return (
     <main className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
@@ -160,11 +83,28 @@ export default function Home() {
         </div>
       )}
 
-      <JobList
-        jobs={MOCK_JOBS}
-        selectedId={selectedId}
-        onSelect={handleSelectJob}
-      />
+      {isPending && <JobListSkeleton />}
+
+      {isError && (
+        <div className="mt-6 p-6 rounded-lg border border-red-200 bg-red-50 dark:bg-red-900/20 dark:border-red-800 text-center">
+          <h3 className="text-lg font-semibold text-red-800 dark:text-red-400 mb-2">Failed to load jobs</h3>
+          <p className="text-sm text-red-600 dark:text-red-300 mb-4">{error.message}</p>
+          <button
+            onClick={() => refetch()}
+            className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-md transition-colors"
+          >
+            Try again
+          </button>
+        </div>
+      )}
+
+      {jobs && !isError && (
+        <JobList
+          jobs={jobs}
+          selectedId={selectedId}
+          onSelect={handleSelectJob}
+        />
+      )}
     </main>
   );
 }

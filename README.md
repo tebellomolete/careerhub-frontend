@@ -127,3 +127,63 @@ We extracted `JobStatusBadge` to adhere to the Single Responsibility Principle. 
 | :--- | :--- | :--- | :--- |
 | **Read from Storage** | `[]` (Empty) | Exactly once, only when the `Home` component first mounts. | If merged, the read logic would run every time the state changes. It would immediately overwrite the user's new selection by reading the old, stale ID back out of `sessionStorage` before the new one could be saved. |
 | **Write to Storage** | `[selectedId]` | Whenever `selectedId` changes (after the initial mount). | If merged, it would be impossible to satisfy both timing requirements. A missing dependency array runs on every single render (causing infinite loops or performance issues), and an empty one never saves updates. |
+
+---
+
+# CareerHub Frontend - Assignment 1.3
+
+## Part 1: Conceptual Questions
+
+### 1. Server State vs Client State
+**Server State** is data that lives on an external server and doesn't belong to the UI directly (e.g., the list of jobs from the database). It requires asynchronous fetching and can become outdated.
+**Client State** is temporary data that belongs entirely to the local application (e.g., `selectedId` remembering which card you clicked, or a dark mode toggle). It is instantaneous and disappears when you close the tab.
+
+### 2. The queryKey Contract
+The `queryKey` (like `["jobs"]`) acts as a unique identifier for the data cache. Whenever we use the same key across different components, TanStack Query knows it's the exact same data and instantly shares the cached result instead of making duplicate network requests.
+
+### 3. Why fetch does not throw on HTTP errors
+The native `fetch` API is designed to only throw an error if there is a total network failure (like the user losing internet). If the server successfully receives the request and replies with a `404 Not Found` or `500 Server Error`, `fetch` considers the request completed successfully. We must manually check `res.ok` to throw our own error.
+
+### 4. Stale-while-revalidate
+This is a caching strategy that prioritizes speed. When you request data, the app instantly shows you the old, cached data (the "stale" data) so you aren't stuck waiting. Behind the scenes, it silently makes a network request to get the fresh data (the "revalidate" step) and swaps it in seamlessly once it arrives.
+
+## README Updates
+
+### 1. What TanStack Query Manages
+Instead of us manually writing `useState` and `useEffect` to handle loading spinners, error messages, and storing data, TanStack Query manages all of this asynchronously. It gives us simple booleans like `isPending` and `isError` while it handles caching, deduping identical requests, and background refetching automatically.
+
+### 2. The queryKey Design Decision
+We use an array `["jobs"]` for the query key because it establishes a scalable pattern. If we later want to fetch jobs for a specific city, we can simply update the key to `["jobs", { location: "Pretoria" }]`. TanStack Query uses this array structure to intelligently organize and separate different caches.
+
+### 3. Skeleton Design Rationale
+We designed the `JobCardSkeleton` to exactly mirror the visual structure (headings, badges, layout) of the real `JobCard`. This prevents "Cumulative Layout Shift" (CLS)—a jarring experience where the page jumps around when the real data finally loads. We render exactly 6 skeletons because it perfectly fills our responsive 3-column grid, making the app look complete while loading.
+
+### Final Build Output
+```text
+> careerhub-frontend@0.1.0 build
+> next build
+
+▲ Next.js 16.2.9 (Turbopack)
+- Environments: .env.local
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 2.5s
+  Running TypeScript ...
+  Finished TypeScript in 1003ms ...
+  Collecting page data using 6 workers ...
+  Generating static pages using 6 workers (0/5) ...
+  Generating static pages using 6 workers (1/5) 
+  Generating static pages using 6 workers (2/5) 
+  Generating static pages using 6 workers (3/5) 
+✓ Generating static pages using 6 workers (5/5) in 155ms
+  Finalizing page optimization ...
+
+Route (app)
+┌ ○ /
+├ ○ /_not-found
+└ ƒ /api/jobs
+
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+```
