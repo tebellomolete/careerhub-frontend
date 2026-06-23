@@ -3,6 +3,9 @@
 import { useState, useEffect } from "react";
 import { JobListing } from "@/types";
 import JobList from "@/components/JobList";
+import { useQuery } from "@tanstack/react-query";
+import { fetchJobs } from "@/lib/api";
+import { JobListSkeleton } from "@/components/JobCardSkeleton";
 
 // Hardcoded mock data strictly matching the JobListing interface
 const MOCK_JOBS: JobListing[] = [
@@ -81,6 +84,17 @@ const MOCK_JOBS: JobListing[] = [
 ];
 
 export default function Home() {
+  const {
+    data: jobs,
+    isPending,
+    isError,
+    error,
+    refetch
+  } = useQuery({
+    queryKey: ["jobs"],
+    queryFn: fetchJobs,
+  });
+
   // Lifted state: Home owns the selected ID, as argued in Part 1
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
