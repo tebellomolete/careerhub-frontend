@@ -3,11 +3,12 @@ import JobCard from "./JobCard";
 
 interface JobListProps {
   jobs: JobListing[];
+  totalCount?: number;
   selectedId: string | null;
   onSelect: (id: string) => void;
 }
 
-export default function JobList({ jobs, selectedId, onSelect }: JobListProps) {
+export default function JobList({ jobs, totalCount, selectedId, onSelect }: JobListProps) {
   // Requirement: Meaningful, domain-specific empty state 
   if (jobs.length === 0) {
     return (
@@ -39,7 +40,7 @@ export default function JobList({ jobs, selectedId, onSelect }: JobListProps) {
       {/* Requirement: Display result count [cite: 102] */}
       <div className="mb-4">
         <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
-          Showing {jobs.length} job{jobs.length !== 1 ? "s" : ""}
+          Showing {jobs.length} job{jobs.length !== 1 ? "s" : ""} {totalCount ? `of ${totalCount}` : ""}
         </p>
       </div>
 

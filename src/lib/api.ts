@@ -1,8 +1,14 @@
 import { JobListing } from "@/types";
 
-export async function fetchJobs(): Promise<JobListing[]> {
+export interface PaginatedJobs {
+  jobs: JobListing[];
+  totalPages: number;
+  totalCount: number;
+}
+
+export async function fetchJobs(page: number = 1): Promise<PaginatedJobs> {
   const baseUrl = process.env.NEXT_PUBLIC_API_URL;
-  const res = await fetch(`${baseUrl}/api/v1/Jobs`);
+  const res = await fetch(`${baseUrl}/api/v1/Jobs?page=${page}&pageSize=21`);
 
   if (!res.ok) {
     throw new Error(`Failed to fetch jobs: ${res.status} ${res.statusText}`);
@@ -39,5 +45,8 @@ export async function fetchJobs(): Promise<JobListing[]> {
     };
   });
 
-  return jobs;
+  const totalCount = parseInt(res.headers.get("X-Total-Count") || "0", 10);
+  const totalPages = Math.ceil(totalCount / 21);
+
+  return { jobs, totalPages, totalCount };
 }

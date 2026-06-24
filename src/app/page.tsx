@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { JobListing } from "@/types";
 import JobList from "@/components/JobList";
+import { Pagination } from "@/components/Pagination";
 import { useQuery } from "@tanstack/react-query";
 import { fetchJobs } from "@/lib/api";
 import { JobListSkeleton } from "@/components/JobCardSkeleton";
@@ -10,16 +11,22 @@ import { JobListSkeleton } from "@/components/JobCardSkeleton";
 // Hardcoded mock data has been moved to src/app/api/jobs/route.ts
 
 export default function Home() {
+  const [page, setPage] = useState(1);
+
   const {
-    data: jobs,
+    data: paginatedJobs,
     isPending,
     isError,
     error,
     refetch
   } = useQuery({
-    queryKey: ["jobs"],
-    queryFn: fetchJobs,
+    queryKey: ["jobs", page],
+    queryFn: () => fetchJobs(page),
   });
+
+  const jobs = paginatedJobs?.jobs || [];
+  const totalPages = paginatedJobs?.totalPages || 1;
+  const totalCount = paginatedJobs?.totalCount || 0;
 
   // Lifted state: Home owns the selected ID, as argued in Part 1
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -98,12 +105,23 @@ export default function Home() {
         </div>
       )}
 
-      {jobs && !isError && (
-        <JobList
-          jobs={jobs}
-          selectedId={selectedId}
-          onSelect={handleSelectJob}
-        />
+      {jobs.length > 0 && !isError && !isPending && (
+        <>
+          <JobList
+            jobs={jobs}
+            totalCount={totalCount}
+            selectedId={selectedId}
+            onSelect={handleSelectJob}
+          />
+          <Pagination
+            currentPage={page}
+            totalPages={totalPages}
+            onPageChange={(newPage) => {
+              setPage(newPage);
+              window.scrollTo({ top: 0, behavior: "smooth" });
+            }}
+          />
+        </>
       )}
     </main>
   );
