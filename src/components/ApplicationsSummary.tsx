@@ -6,7 +6,7 @@ interface AppStats {
 }
 
 export default async function ApplicationsSummary() {
-  const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/applications/stats`, {
+  const res = await fetch(`http://localhost:3000/api/applications/stats`, {
     cache: "no-store",
   });
   

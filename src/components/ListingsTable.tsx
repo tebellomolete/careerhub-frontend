@@ -12,7 +12,7 @@ export default async function ListingsTable() {
     next: { tags: ["jobs"] },
   });
   
-  const statsResPromise = fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/applications/stats`, {
+  const statsResPromise = fetch(`http://localhost:3000/api/applications/stats`, {
     cache: "no-store",
   });
 
