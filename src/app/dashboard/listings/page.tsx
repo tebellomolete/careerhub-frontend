@@ -2,15 +2,40 @@ import Link from "next/link";
 import { JobListing } from "@/types";
 
 export default async function DashboardListingsPage() {
-  const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/jobs`, {
+  const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/jobs`, {
     cache: "no-store",
   });
 
   if (!res.ok) {
+    console.error(`Failed to fetch jobs: ${res.status} ${res.statusText}`);
     throw new Error("Failed to fetch jobs");
   }
 
-  const jobs: JobListing[] = await res.json();
+  const responseData = await res.json();
+  const jobs: JobListing[] = responseData.data.map((job: any) => {
+    let salaryMin = 0;
+    let salaryMax = 0;
+    if (job.salaryDisplay) {
+      const parts = job.salaryDisplay.replace(/[^\d-]/g, "").split("-");
+      if (parts.length >= 2) {
+        salaryMin = parseInt(parts[0], 10) || 0;
+        salaryMax = parseInt(parts[1], 10) || 0;
+      }
+    }
+
+    return {
+      id: job.id,
+      title: job.title,
+      company: job.companyName,
+      location: job.location,
+      employmentType: job.type,
+      salaryMin,
+      salaryMax,
+      postedAt: job.postedAt,
+      isActive: true,
+      applicantCount: job.applicationCount,
+    };
+  });
 
   return (
     <div>

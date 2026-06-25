@@ -11,7 +11,7 @@ export default async function JobDetailPage({
 }) {
   const { id } = await params;
 
-  const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/jobs/${id}`, {
+  const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/jobs/${id}`, {
     cache: "no-store",
   });
 
@@ -20,10 +20,39 @@ export default async function JobDetailPage({
   }
 
   if (!res.ok) {
+    console.error(`Failed to fetch job details: ${res.status} ${res.statusText}`);
     throw new Error(`Failed to fetch job details: ${res.statusText}`);
   }
 
-  const job: JobListing = await res.json();
+  const responseData = await res.json();
+  const rawJob = responseData.data || responseData;
+  
+  let salaryMin = 0;
+  let salaryMax = 0;
+  if (rawJob.salaryDisplay) {
+    const parts = rawJob.salaryDisplay.replace(/[^\d-]/g, "").split("-");
+    if (parts.length >= 2) {
+      salaryMin = parseInt(parts[0], 10) || 0;
+      salaryMax = parseInt(parts[1], 10) || 0;
+    }
+  } else if (rawJob.salaryMin !== undefined) {
+    salaryMin = rawJob.salaryMin;
+    salaryMax = rawJob.salaryMax;
+  }
+
+  const job: JobListing = {
+    id: rawJob.id,
+    title: rawJob.title,
+    company: rawJob.companyName || rawJob.company,
+    location: rawJob.location,
+    employmentType: rawJob.type || rawJob.employmentType,
+    salaryMin,
+    salaryMax,
+    postedAt: rawJob.postedAt,
+    isActive: rawJob.isActive !== undefined ? rawJob.isActive : true,
+    applicantCount: rawJob.applicationCount ?? rawJob.applicantCount ?? 0,
+    description: rawJob.description
+  };
 
   const formatSalary = (amount: number) => amount.toLocaleString("en-ZA");
 
