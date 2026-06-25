@@ -58,6 +58,13 @@ export default function Home() {
     }
   }, [selectedId]); // Runs whenever selectedId changes
 
+  // Effect 3: Smooth scroll to top when a job is selected
+  useEffect(() => {
+    if (selectedId) {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  }, [selectedId]);
+
   // Requirement: Clicking an already selected card deselects it
   const handleSelectJob = (id: string) => {
     setSelectedId((prevId) => (prevId === id ? null : id));
@@ -83,7 +90,7 @@ export default function Home() {
       */}
       {selectedJob && (
         <div className="mb-8">
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 shadow-sm dark:bg-blue-900/20 dark:border-blue-800">
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-8 shadow-sm dark:bg-blue-900/20 dark:border-blue-800">
             <h2 className="text-sm font-semibold text-blue-600 uppercase tracking-wider mb-1 dark:text-blue-400">
               Currently Selected
             </h2>
