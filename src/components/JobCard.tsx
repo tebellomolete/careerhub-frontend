@@ -31,7 +31,7 @@ export default function JobCard({ job, isSelected, onSelect }: JobCardProps) {
     <div
       onClick={() => onSelect(job.id)}
       className={cn(
-        "p-5 rounded-lg border cursor-pointer transition-all",
+        "relative p-5 rounded-lg border cursor-pointer transition-all overflow-hidden",
         // Selected state styling
         isSelected && "border-blue-600 bg-blue-50 ring-1 ring-blue-600 dark:bg-blue-900/20 dark:border-blue-500 dark:ring-blue-500",
         // Default styling (active & unselected)
@@ -40,6 +40,12 @@ export default function JobCard({ job, isSelected, onSelect }: JobCardProps) {
         !isSelected && !job.isActive && "border-gray-200 bg-gray-50 opacity-75 hover:border-gray-300 dark:bg-gray-900 dark:border-gray-800 dark:hover:border-gray-700"
       )}
     >
+      {job.hasApplied && (
+        <div className="absolute top-0 right-0 bg-green-500 text-white text-xs font-bold px-3 py-1 rounded-bl-lg z-10 shadow-sm">
+          Applied
+        </div>
+      )}
+
       <div className="flex justify-between items-start mb-2">
         <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">{job.title}</h2>
       </div>
