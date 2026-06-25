@@ -245,3 +245,67 @@ Route (app)
 ○  (Static)   prerendered as static content
 ƒ  (Dynamic)  server-rendered on demand
 ```
+
+---
+
+# CareerHub Frontend - Assignment 2.1
+
+## Part 1: Conceptual Answers
+
+### 1. `cache: "no-store"` vs Default
+By default, Next.js App Router aggressively caches data fetches in Server Components (using `force-cache`). This means the data is fetched once at build time or on the first request, and all subsequent users see that stale data indefinitely until the cache is manually invalidated. By specifying `cache: "no-store"`, we tell Next.js to skip the cache completely and fetch fresh data directly from the API on every single request.
+
+### 2. The `"use client"` Boundary
+The `"use client"` directive defines the "Client Boundary". Anything above this boundary (Server Components) runs exclusively on the server and has no access to the browser, React state (`useState`), or hooks (`useEffect`). When you place `"use client"` at the top of a file, that component and all its children become Client Components. These components are hydrated in the browser, allowing them to use interactive React features and browser APIs.
+
+### 3. Why `params.id` is a String
+In a web URL (e.g., `/jobs/123`), every segment of the path is fundamentally just text. The browser and the routing engine have no concept of types—they just parse strings separated by slashes. Therefore, Next.js always provides route parameters as strings. If your database uses integer IDs, you must manually parse the string (`parseInt(params.id)`) before querying the database.
+
+### 4. What "Layout Persists" Means
+When you navigate between pages that share the same `layout.tsx` (like moving from `/dashboard` to `/dashboard/listings`), Next.js only replaces the `children` prop. The layout component itself does not unmount or re-render from scratch. This means any state inside the layout (like an open sidebar toggle) is preserved, and the browser doesn't have to reload those DOM elements, making navigation significantly faster.
+
+## README Updates
+
+### 1. Composition in `/jobs/[id]`
+We used the composition pattern by placing the interactive `<ApplicationForm>` (a Client Component) directly inside the `page.tsx` (a Server Component). Because the Server Component fetches the data, it simply passes the `jobId` and `jobTitle` as props to the Client Component. This keeps the data fetching fast and secure on the server, while still allowing the form to handle complex user interactions and state in the browser.
+
+### 2. Why `JobLinkCard` has no `"use client"`
+`JobLinkCard` is entirely static—it only receives data via props and uses the native Next.js `<Link>` component. It has no need for `useState`, `useEffect`, or DOM event listeners (like `onClick`). By leaving out `"use client"`, it remains a Server Component, meaning its JavaScript is never shipped to the browser, reducing the bundle size and improving performance.
+
+### 3. `loading.tsx` vs Manual Loading State
+Instead of manually defining `const [isLoading, setIsLoading] = useState(true)` and conditionally rendering a spinner, we used `loading.tsx`. Next.js automatically intercepts the navigation, immediately displays the UI from `loading.tsx`, and waits for the Server Component's `await fetch(...)` to complete in the background. Once the data is ready, Next.js automatically swaps the loading UI for the real page UI, completely removing the need for manual state management.
+
+### Final Build Output
+```text
+> careerhub-frontend@0.1.0 build
+> next build
+
+▲ Next.js 16.2.9 (Turbopack)
+- Environments: .env.local
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 1586ms
+  Running TypeScript ...
+  Finished TypeScript in 1214ms ...
+  Collecting page data using 7 workers ...
+  Generating static pages using 7 workers (0/8) ...
+  Generating static pages using 7 workers (2/8) 
+  Generating static pages using 7 workers (4/8) 
+  Generating static pages using 7 workers (6/8) 
+✓ Generating static pages using 7 workers (8/8) in 102ms
+  Finalizing page optimization ...
+
+Route (app)
+┌ ○ /
+├ ○ /_not-found
+├ ƒ /api/applications
+├ ƒ /api/jobs
+├ ƒ /api/jobs/[id]
+├ ƒ /dashboard/listings
+├ ƒ /jobs
+└ ƒ /jobs/[id]
+
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+```
