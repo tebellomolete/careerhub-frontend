@@ -13,6 +13,7 @@ export interface JobListing {
   isActive: boolean;
   applicantCount: number;
   hasApplied?: boolean; // Stretch B: Optimistic UI flag
+  description?: string;
 }
 
 export interface ApplicationRequest {
