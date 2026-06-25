@@ -3,6 +3,8 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import ThemeToggle from "@/components/ThemeToggle";
 import { Providers } from "./providers";
+import NavLinks from "@/components/NavLinks";
+import Link from "next/link";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -30,8 +32,16 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-white dark:bg-gray-950 transition-colors">
-        <header className="w-full p-4 flex justify-end border-b border-gray-200 dark:border-gray-800">
-          <ThemeToggle />
+        <header className="w-full p-4 flex justify-between items-center border-b border-gray-200 dark:border-gray-800">
+          <Link href="/" className="text-xl font-extrabold text-blue-600 dark:text-blue-400 tracking-tight">
+            CareerHub
+          </Link>
+          <div className="flex items-center gap-6">
+            <nav>
+              <NavLinks />
+            </nav>
+            <ThemeToggle />
+          </div>
         </header>
         <div className="flex-1 flex flex-col">
           <Providers>
