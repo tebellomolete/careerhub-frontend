@@ -12,7 +12,7 @@ export default async function JobDetailPage({
   const { id } = await params;
 
   const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/jobs/${id}`, {
-    cache: "no-store",
+    next: { tags: ["jobs", `job-${id}`] },
   });
 
   if (res.status === 404) {
