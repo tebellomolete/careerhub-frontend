@@ -187,3 +187,61 @@ Route (app)
 ○  (Static)   prerendered as static content
 ƒ  (Dynamic)  server-rendered on demand
 ```
+
+---
+
+## Assignment 1.4: Application Form & Optimistic UI
+
+### Part 1: Conceptual Answers
+
+1. **Why is `@hookform/resolvers` a separate package?**
+   React Hook Form is designed to be completely library-agnostic. Instead of hardcoding Zod or Yup directly into the core library, they created a standard "resolver" function signature. A resolver is simply a function that takes your validation schema and returns a new function. This new function accepts the current form values, runs the schema validation, and returns either the clean values or the formatted errors. Because of this decoupled design, you can plug in *any* validation library just by using its specific resolver package!
+
+2. **The HTML Number Input Problem & `z.coerce`**
+   By default, HTML `<input type="number">` elements actually return their values as *strings* in the DOM (e.g., `"5"` instead of `5`). If Zod expects a strict `number`, it will fail validation because a string is not a number. By using `z.coerce.number()`, we tell Zod to actively try parsing the incoming string into an integer *before* validating it. The final TypeScript type inferred by Zod is still a strict `number`, which keeps our frontend data perfectly clean!
+
+3. **`mutate` vs `mutateAsync` with `isSubmitting`**
+   React Hook Form's `handleSubmit` function expects you to return a Promise so it knows exactly how long the submission is taking (which keeps `isSubmitting` set to `true`). 
+   - If we use `mutate`, it returns `void` (nothing) immediately, meaning `handleSubmit` thinks the submission finished instantly and sets `isSubmitting` back to `false` prematurely!
+   - If we use `mutateAsync`, it returns a *Promise*. `handleSubmit` will wait for this Promise to resolve or reject, keeping `isSubmitting` accurately set to `true` for the entire duration of the API call.
+
+4. **`onSuccess` Placement (Option A vs Option B)**
+   - **Option A (Global):** Placing `onSuccess` or `onSettled` directly inside the `useMutation({ ... })` configuration applies it *globally* to the mutation. Whenever this mutation fires, regardless of how or where, this callback runs. We use this for invalidating the cache (`queryClient.invalidateQueries`) because cache synchronization should happen globally across the app.
+   - **Option B (Local):** Placing `onSuccess` inside the actual `.mutateAsync(data, { onSuccess: ... })` call makes it fire *locally* only for that specific instance. 
+
+### Part 6: Technical Explanations
+
+- **Schema Design Decisions:** We used standard string validations for `fullName` and `email`, but specifically utilized `.or(z.literal(""))` alongside `.optional()` for optional fields like `phone` and `linkedInUrl`. This ensures that if a user leaves the input completely blank (an empty string), Zod correctly interprets it as undefined rather than failing validation.
+- **The Cross-Field Refine:** To handle the relationship between `availableImmediately` and `noticePeriodWeeks`, we chained a `.refine()` to the end of our Zod object. This rule explicitly states: "Either you are available immediately, OR your notice period must be greater than 0." If this fails, the error message is specifically routed to the `noticePeriodWeeks` field path so the red text appears precisely under that input.
+- **The Two Loading Flags:** `isSubmitting` tracks the exact moment the user clicks the submit button while React Hook Form runs validation and fires the Promise. `mutation.isPending` tracks the actual network lifecycle of the API call via TanStack Query. By combining them (`isBusy = isSubmitting || mutation.isPending`), we guarantee the submit button stays fully disabled for the absolute entire lifecycle of the user interaction.
+
+### Production Build Output
+```
+> careerhub-frontend@0.1.0 build
+> next build
+
+▲ Next.js 16.2.9 (Turbopack)
+- Environments: .env.local
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 2.1s
+  Running TypeScript ...
+  Finished TypeScript in 1118ms ...
+  Collecting page data using 7 workers ...
+  Generating static pages using 7 workers (0/6) ...
+  Generating static pages using 7 workers (1/6) 
+  Generating static pages using 7 workers (2/6) 
+  Generating static pages using 7 workers (4/6) 
+✓ Generating static pages using 7 workers (6/6) in 170ms
+  Finalizing page optimization ...
+
+Route (app)
+┌ ○ /
+├ ○ /_not-found
+├ ƒ /api/applications
+└ ƒ /api/jobs
+
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+```

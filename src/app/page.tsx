@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { JobListing } from "@/types";
 import JobList from "@/components/JobList";
 import { Pagination } from "@/components/Pagination";
+import ApplicationForm from "@/components/ApplicationForm";
 import { useQuery } from "@tanstack/react-query";
 import { fetchJobs } from "@/lib/api";
 import { JobListSkeleton } from "@/components/JobCardSkeleton";
@@ -81,12 +82,15 @@ export default function Home() {
         rather than just hiding it with CSS. 
       */}
       {selectedJob && (
-        <div className="mb-8 bg-blue-50 border border-blue-200 rounded-lg p-6 shadow-sm dark:bg-blue-900/20 dark:border-blue-800">
-          <h2 className="text-sm font-semibold text-blue-600 uppercase tracking-wider mb-1 dark:text-blue-400">
-            Currently Selected
-          </h2>
-          <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100">{selectedJob.title}</h3>
-          <p className="text-gray-700 mt-1 dark:text-gray-300">{selectedJob.company}</p>
+        <div className="mb-8">
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 shadow-sm dark:bg-blue-900/20 dark:border-blue-800">
+            <h2 className="text-sm font-semibold text-blue-600 uppercase tracking-wider mb-1 dark:text-blue-400">
+              Currently Selected
+            </h2>
+            <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100">{selectedJob.title}</h3>
+            <p className="text-gray-700 mt-1 dark:text-gray-300">{selectedJob.company}</p>
+          </div>
+          <ApplicationForm jobId={selectedJob.id} jobTitle={selectedJob.title} />
         </div>
       )}
 
