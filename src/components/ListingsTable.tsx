@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { JobListing } from "@/types";
+import CloseJobButton from "./CloseJobButton";
 
 interface AppStats {
   jobId: string;
@@ -101,13 +102,14 @@ export default async function ListingsTable() {
                   <td className="px-6 py-4 text-right text-gray-600 dark:text-gray-400 font-medium">
                     {job.applicantCount}
                   </td>
-                  <td className="px-6 py-4 text-right">
+                  <td className="px-6 py-4 text-right flex items-center justify-end">
                     <Link
                       href={`/jobs/${job.id}`}
                       className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-medium"
                     >
                       View
                     </Link>
+                    <CloseJobButton jobId={job.id} isActive={job.isActive} />
                   </td>
                 </tr>
               ))}
