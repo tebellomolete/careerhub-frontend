@@ -1,4 +1,4 @@
-import { JobListing } from "@/types";
+import { JobListing, ApplicationRequest, ApplicationResponse } from "@/types";
 
 export interface PaginatedJobs {
   jobs: JobListing[];
@@ -49,4 +49,29 @@ export async function fetchJobs(page: number = 1): Promise<PaginatedJobs> {
   const totalPages = Math.ceil(totalCount / 21);
 
   return { jobs, totalPages, totalCount };
+}
+
+export async function submitApplication(data: ApplicationRequest): Promise<ApplicationResponse> {
+  const baseUrl = process.env.NEXT_PUBLIC_API_URL;
+  
+  const res = await fetch(`${baseUrl}/api/applications`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(data),
+  });
+
+  if (!res.ok) {
+    let problem: any = {};
+    try {
+      problem = await res.json();
+    } catch {
+      // Ignore JSON parse errors for non-JSON error responses
+    }
+    const errorMessage = problem?.detail ?? problem?.title ?? "An error occurred while submitting the application.";
+    throw new Error(errorMessage);
+  }
+
+  return res.json();
 }
