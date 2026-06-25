@@ -17,8 +17,8 @@ export interface JobListing {
 
 export interface ApplicationRequest {
   jobId: string;
-  fullName: string;
-  email: string;
+  applicantName: string;
+  applicantEmail: string;
   phone?: string;
   yearsOfExperience: number;
   coverLetter: string;

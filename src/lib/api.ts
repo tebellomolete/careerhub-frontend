@@ -54,12 +54,20 @@ export async function fetchJobs(page: number = 1): Promise<PaginatedJobs> {
 export async function submitApplication(data: ApplicationRequest): Promise<ApplicationResponse> {
   const baseUrl = process.env.NEXT_PUBLIC_API_URL;
   
-  const res = await fetch(`${baseUrl}/api/applications`, {
+  // Destructure to separate jobId from the rest of the payload, and map to C# DTO
+  const { jobId, applicantName, applicantEmail } = data;
+  
+  const payload = {
+    applicantName,
+    applicantEmail
+  };
+  
+  const res = await fetch(`${baseUrl}/api/v1/jobs/${jobId}/applications`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify(data),
+    body: JSON.stringify(payload),
   });
 
   if (!res.ok) {

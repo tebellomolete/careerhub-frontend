@@ -8,8 +8,8 @@ import { submitApplication } from "@/lib/api";
 
 const ApplicationFormData = z
   .object({
-    fullName: z.string().min(2, "Full name must be at least 2 characters").max(100),
-    email: z.string().email("Please enter a valid email address"),
+    applicantName: z.string().min(2, "Full name must be at least 2 characters").max(100),
+    applicantEmail: z.string().email("Please enter a valid email address"),
     phone: z
       .string()
       .regex(/^\+?[\d\s\-()]{8,15}$/, "Please enter a valid phone number")
@@ -54,7 +54,7 @@ export default function ApplicationForm({ jobId, jobTitle }: ApplicationFormProp
     reset,
     formState: { errors, isSubmitting },
   } = useForm<FormData>({
-    resolver: zodResolver(ApplicationFormData),
+    resolver: zodResolver(ApplicationFormData) as any,
     defaultValues: {
       availableImmediately: true,
       noticePeriodWeeks: 0,
@@ -137,26 +137,26 @@ export default function ApplicationForm({ jobId, jobTitle }: ApplicationFormProp
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Full Name *</label>
           <input
             type="text"
-            {...register("fullName")}
-            aria-invalid={!!errors.fullName}
+            {...register("applicantName")}
+            aria-invalid={!!errors.applicantName}
             className={`mt-1 block w-full rounded-md shadow-sm sm:text-sm p-2 border bg-transparent ${
-              errors.fullName ? "border-red-500 focus:ring-red-500" : "border-gray-300 focus:ring-blue-500 dark:border-gray-700"
+              errors.applicantName ? "border-red-500 focus:ring-red-500" : "border-gray-300 focus:ring-blue-500 dark:border-gray-700"
             } dark:text-gray-100`}
           />
-          {errors.fullName && <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.fullName.message}</p>}
+          {errors.applicantName && <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.applicantName.message}</p>}
         </div>
 
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Email *</label>
           <input
             type="email"
-            {...register("email")}
-            aria-invalid={!!errors.email}
+            {...register("applicantEmail")}
+            aria-invalid={!!errors.applicantEmail}
             className={`mt-1 block w-full rounded-md shadow-sm sm:text-sm p-2 border bg-transparent ${
-              errors.email ? "border-red-500 focus:ring-red-500" : "border-gray-300 focus:ring-blue-500 dark:border-gray-700"
+              errors.applicantEmail ? "border-red-500 focus:ring-red-500" : "border-gray-300 focus:ring-blue-500 dark:border-gray-700"
             } dark:text-gray-100`}
           />
-          {errors.email && <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.email.message}</p>}
+          {errors.applicantEmail && <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.applicantEmail.message}</p>}
         </div>
 
         <div>
