@@ -33,8 +33,8 @@ export async function closeJobListing(
 
     const job = await res.json();
     
-    revalidateTag("jobs");
-    revalidateTag(`job-${jobId}`);
+    revalidateTag("jobs", {});
+    revalidateTag(`job-${jobId}`, {});
 
     return { status: "success", jobTitle: job.title || "Job" };
   } catch (err: any) {
