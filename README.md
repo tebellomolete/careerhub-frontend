@@ -309,3 +309,80 @@ Route (app)
 ○  (Static)   prerendered as static content
 ƒ  (Dynamic)  server-rendered on demand
 ```
+
+---
+
+# CareerHub Frontend - Assignment 2.2
+
+## Part 1: Conceptual Answers
+
+### 1. Choosing a cache strategy per data source
+When we built our public facing job listings (`/jobs`), it made sense to cache the results because job data changes infrequently and is identical for every user. However, for a logged-in employer looking at `/dashboard/listings` or reviewing real-time applicant stats, they need immediate, up-to-the-second accuracy. A generic cache strategy fails here; we must choose caching based on the *consumer's* needs (employer vs public) and the *volatility* of the data. By using `next: { tags: ["jobs"] }`, we get the best of both worlds: we cache the data for speed, but retain the ability to instantly bust that cache across the entire application the moment a job status changes.
+
+### 2. Why revalidateTag works across routes
+Unlike `revalidatePath` which only clears the cache for a specific URL, `revalidateTag` acts globally. Because we attached the `"jobs"` tag directly to our `fetch()` calls, that tag is permanently associated with that specific data chunk in the Next.js Data Cache, regardless of which route or component actually triggered the fetch. When our Server Action calls `revalidateTag("jobs")`, Next.js hunts down every single cached response in the system holding that tag and purges them simultaneously. The next time a user navigates anywhere relying on that data, they are guaranteed to receive fresh data.
+
+### 3. What Promise.all failure means
+`Promise.all` operates on a strict "fail-fast" principle. If we trigger two fetches simultaneously (jobs and stats), and the stats fetch fails while the jobs fetch succeeds, the entire `Promise.all` immediately throws an error and rejects. The success of the jobs fetch is discarded. In our `ListingsTable`, this means if the stats API goes down, the entire table crashes and triggers the nearest `error.tsx` boundary, even if the jobs data was perfectly healthy.
+
+### 4. The two-boundary vs one-boundary trade-off
+If we wrapped both `<ApplicationsSummary />` and `<ListingsTable />` in a single `<Suspense>` boundary, the user would be forced to stare at a skeleton until *both* components finish their data fetching. By giving them independent boundaries, they stream in exactly when they are ready. The summary card might appear in 100ms, giving the user immediate value, while the table's skeleton spins for another 2 seconds. The trade-off is visual consistency: independent boundaries can cause visual "pop-in" as elements load at different times, whereas a single boundary ensures the UI updates all at once in a cohesive visual block.
+
+## README Updates
+
+### 1. Tracing the close action end to end
+1. **The Click:** The user clicks "Close" on the `CloseJobButton`.
+2. **Optimistic UI:** `useOptimistic` instantly intercepts the click, changing its internal state to `false`, causing the button to immediately disappear from the screen so the UI feels lightning fast.
+3. **The Server Action:** Behind the scenes, the browser sends a POST request containing the `jobId` form data to our `closeJobListing` Server Action.
+4. **The Database:** The Server Action executes on the server, parsing the ID and sending a `PATCH` request to the live C# backend to permanently update the database.
+5. **Cache Invalidation:** Upon a successful C# response, the Server Action calls `revalidateTag("jobs")`, purging the stale jobs data from the Next.js cache.
+6. **The Re-render:** Because a Server Action mutated data, Next.js automatically triggers a re-render of the current route. The `<ListingsTable>` re-runs its fetch, retrieves the fresh (now closed) job from the API, and streams the updated HTML back to the browser.
+
+### 2. Why two Suspense boundaries are better than one here
+In our dashboard, the `<ApplicationsSummary />` fetches a tiny, lightweight JSON object of stats. The `<ListingsTable />` fetches a much larger payload of all jobs and their descriptions, plus the stats, and performs array mapping. By wrapping them in two separate boundaries, the summary card can render and stream to the browser almost instantly, providing immediate value and interactivity to the user, without being artificially delayed by the slower, heavier table query.
+
+### 3. The self-contained component trade-off
+By moving the data fetching directly inside `<ListingsTable>` and `<ApplicationsSummary>`, we created "self-contained" components. 
+**Pros:** They are highly reusable; you can drop `<ListingsTable>` onto any page and it "just works" because it fetches its own data. The parent page code is incredibly clean.
+**Cons:** We lose centralized control over data fetching. If the parent page and three different self-contained components all happen to fetch the exact same `/api/v1/jobs` endpoint, Next.js will deduplicate them, but it becomes harder for a developer to look at a page and easily understand all the network requests it is making. It also risks waterfall requests if these components are nested inside each other rather than rendered in parallel.
+
+### 4. Stretch B: Granular Cache Tags
+We tagged the individual job fetch with `next: { tags: ["jobs", "job-[id]"] }`. 
+We need the global `"jobs"` tag so that if a massive system-wide event occurs (e.g., an admin clicks "Archive All Jobs"), a single `revalidateTag("jobs")` clears every single job-related cache across the entire site instantly.
+However, we need the specific `"job-[id]"` tag for precision. When a user closes *one specific job* using our action, we want to invalidate that single job's detail page (`job-123`) without accidentally purging the cache for the hundreds of other perfectly valid job detail pages. This granular tagging gives us surgical precision over cache invalidation, maximizing cache hit rates and minimizing unnecessary API load.
+
+### Final Build Output
+```text
+> careerhub-frontend@0.1.0 build
+> next build
+
+▲ Next.js 16.2.9 (Turbopack)
+- Environments: .env.local
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 1670ms
+  Running TypeScript ...
+  Finished TypeScript in 1288ms ...
+  Collecting page data using 7 workers ...
+  Generating static pages using 7 workers (0/9) ...
+  Generating static pages using 7 workers (2/9) 
+  Generating static pages using 7 workers (4/9) 
+  Generating static pages using 7 workers (6/9) 
+✓ Generating static pages using 7 workers (9/9) in 153ms
+  Finalizing page optimization ...
+
+Route (app)
+┌ ○ /
+├ ○ /_not-found
+├ ƒ /api/applications
+├ ƒ /api/applications/stats
+├ ƒ /api/jobs
+├ ƒ /api/jobs/[id]
+├ ƒ /dashboard/listings
+├ ○ /jobs
+└ ƒ /jobs/[id]
+
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+```
