@@ -102,7 +102,40 @@ export async function GET(
 
 export async function POST() {
   return NextResponse.json(
-    { title: "Method Not Allowed", detail: "Use GET", status: 405 },
+    { title: "Method Not Allowed", detail: "Use GET or PATCH", status: 405 },
     { status: 405 }
   );
+}
+
+export async function PATCH(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params;
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json(
+      { title: "Bad Request", detail: "Invalid JSON", status: 400 },
+      { status: 400 }
+    );
+  }
+  
+  const jobIndex = MOCK_JOBS.findIndex(j => j.id === id);
+  
+  if (jobIndex === -1) {
+    return NextResponse.json(
+      { title: "Not Found", detail: "Job not found", status: 404 },
+      { status: 404 }
+    );
+  }
+  
+  if (body.status === "Closed") {
+    MOCK_JOBS[jobIndex].isActive = false;
+  } else if (body.status === "Active") {
+    MOCK_JOBS[jobIndex].isActive = true;
+  }
+  
+  return NextResponse.json(MOCK_JOBS[jobIndex]);
 }
