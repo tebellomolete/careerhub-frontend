@@ -1,7 +1,17 @@
 import { JobListing } from "@/types";
 import JobLinkCard from "@/components/JobLinkCard";
+import JobFilters from "@/components/JobFilters";
 
-export default async function JobsPage() {
+export default async function JobsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}) {
+  const resolvedParams = await searchParams;
+  const q = typeof resolvedParams.q === 'string' ? resolvedParams.q.toLowerCase() : '';
+  const location = typeof resolvedParams.location === 'string' ? resolvedParams.location.toLowerCase() : '';
+  const status = typeof resolvedParams.status === 'string' ? resolvedParams.status : 'all';
+
   const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/jobs`, {
     next: { tags: ["jobs"] },
   });
@@ -37,17 +47,23 @@ export default async function JobsPage() {
     };
   });
 
-  if (jobs.length === 0) {
-    return (
-      <main className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
-        <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight dark:text-gray-100 mb-8">
-          Available Jobs
-        </h1>
-        <div className="text-center py-12">
-          <p className="text-gray-500 dark:text-gray-400">No jobs available at the moment.</p>
-        </div>
-      </main>
+  let filteredJobs = jobs;
+
+  if (q) {
+    filteredJobs = filteredJobs.filter((job) =>
+      job.title.toLowerCase().includes(q) ||
+      job.company.toLowerCase().includes(q)
     );
+  }
+
+  if (location) {
+    filteredJobs = filteredJobs.filter((job) =>
+      job.location.toLowerCase().includes(location)
+    );
+  }
+
+  if (status === "open") {
+    filteredJobs = filteredJobs.filter((job) => job.isActive);
   }
 
   return (
@@ -55,11 +71,20 @@ export default async function JobsPage() {
       <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight dark:text-gray-100 mb-8">
         Available Jobs
       </h1>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {jobs.map((job) => (
-          <JobLinkCard key={job.id} job={job} />
-        ))}
-      </div>
+      
+      <JobFilters />
+
+      {filteredJobs.length === 0 ? (
+        <div className="text-center py-12">
+          <p className="text-gray-500 dark:text-gray-400">No jobs match your search criteria.</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredJobs.map((job) => (
+            <JobLinkCard key={job.id} job={job} />
+          ))}
+        </div>
+      )}
     </main>
   );
 }
