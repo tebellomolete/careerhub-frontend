@@ -1,70 +1,46 @@
 import Link from "next/link";
 import { JobListing } from "@/types";
 import CloseJobButton from "./CloseJobButton";
+import JobLinkCard from "./JobLinkCard";
 
-interface AppStats {
-  jobId: string;
-  applicationCount: number;
+interface ListingsTableProps {
+  jobs: JobListing[];
+  view: 'table' | 'grid';
+  showClosedJobs: boolean;
+  role?: string;
 }
 
-export default async function ListingsTable() {
-  const jobsResPromise = fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/jobs`, {
-    next: { tags: ["jobs"] },
-  });
-  
-  const statsResPromise = fetch(`http://localhost:3000/api/applications/stats`, {
-    cache: "no-store",
-  });
-
-  const [jobsRes, statsRes] = await Promise.all([jobsResPromise, statsResPromise]);
-
-  if (!jobsRes.ok) {
-    console.error(`Failed to fetch jobs: ${jobsRes.status} ${jobsRes.statusText}`);
-    throw new Error("Failed to fetch jobs");
-  }
-
-  if (!statsRes.ok) {
-    console.error(`Failed to fetch stats: ${statsRes.status} ${statsRes.statusText}`);
-    throw new Error("Failed to fetch stats");
-  }
-
-  const jobsData = await jobsRes.json();
-  const statsData: AppStats[] = await statsRes.json();
-
-  const jobs: JobListing[] = jobsData.data.map((job: any) => {
-    let salaryMin = 0;
-    let salaryMax = 0;
-    if (job.salaryDisplay) {
-      const parts = job.salaryDisplay.replace(/[^\d-]/g, "").split("-");
-      if (parts.length >= 2) {
-        salaryMin = parseInt(parts[0], 10) || 0;
-        salaryMax = parseInt(parts[1], 10) || 0;
-      }
-    }
-
-    const stat = statsData.find((s) => s.jobId === job.id);
-
-    return {
-      id: job.id,
-      title: job.title,
-      company: job.companyName,
-      location: job.location,
-      employmentType: job.type,
-      salaryMin,
-      salaryMax,
-      postedAt: job.postedAt,
-      isActive: job.isActive !== undefined ? job.isActive : true, // Might need to check backend format
-      applicantCount: stat ? stat.applicationCount : (job.applicationCount ?? 0),
-    };
-  });
+export default function ListingsTable({ jobs, view, showClosedJobs, role }: ListingsTableProps) {
+  const displayJobs = showClosedJobs ? jobs : jobs.filter((job) => job.isActive);
 
   return (
     <div>
       <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-        Total jobs: {jobs.length}
+        Total jobs: {displayJobs.length}
       </p>
-      <div className="bg-white dark:bg-gray-900 shadow-sm border border-gray-200 dark:border-gray-800 rounded-lg overflow-hidden">
-        <div className="overflow-x-auto">
+      
+      {view === 'grid' ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {displayJobs.map((job) => (
+            <div key={job.id} className="relative">
+              <JobLinkCard job={job} />
+              {role === "employer" && (
+                /* Defense in depth: Check role before rendering the close button UI */
+                <div className="absolute top-4 right-4 z-10">
+                  <CloseJobButton jobId={job.id} isActive={job.isActive} />
+                </div>
+              )}
+            </div>
+          ))}
+          {displayJobs.length === 0 && (
+            <div className="col-span-full py-12 text-center text-gray-500 dark:text-gray-400">
+              No jobs found.
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="bg-white dark:bg-gray-900 shadow-sm border border-gray-200 dark:border-gray-800 rounded-lg overflow-hidden">
+          <div className="overflow-x-auto">
           <table className="w-full text-sm text-left">
             <thead className="bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-b border-gray-200 dark:border-gray-700">
               <tr>
@@ -77,7 +53,7 @@ export default async function ListingsTable() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200 dark:divide-gray-800">
-              {jobs.map((job) => (
+              {displayJobs.map((job) => (
                 <tr key={job.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
                   <td className="px-6 py-4 font-medium text-gray-900 dark:text-gray-100">
                     {job.title}
@@ -105,15 +81,18 @@ export default async function ListingsTable() {
                   <td className="px-6 py-4 text-right flex items-center justify-end">
                     <Link
                       href={`/jobs/${job.id}`}
-                      className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-medium"
+                      className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-medium mr-4"
                     >
                       View
                     </Link>
-                    <CloseJobButton jobId={job.id} isActive={job.isActive} />
+                    {role === "employer" && (
+                      /* Defense in depth: Check role before rendering the close button UI */
+                      <CloseJobButton jobId={job.id} isActive={job.isActive} />
+                    )}
                   </td>
                 </tr>
               ))}
-              {jobs.length === 0 && (
+              {displayJobs.length === 0 && (
                 <tr>
                   <td colSpan={6} className="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
                     No jobs found.
@@ -124,6 +103,7 @@ export default async function ListingsTable() {
           </table>
         </div>
       </div>
+      )}
     </div>
   );
 }

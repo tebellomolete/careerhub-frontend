@@ -1,6 +1,8 @@
 import { Suspense } from "react";
 import ApplicationsSummary, { ApplicationsSummarySkeleton } from "@/components/ApplicationsSummary";
-import ListingsTable, { ListingsTableSkeleton } from "@/components/ListingsTable";
+import { ListingsTableSkeleton } from "@/components/ListingsTable";
+import DashboardToolbar from "@/components/DashboardToolbar";
+import ListingsDataWrapper from "@/components/ListingsDataWrapper";
 
 export default function DashboardListingsPage() {
   return (
@@ -13,8 +15,10 @@ export default function DashboardListingsPage() {
         <ApplicationsSummary />
       </Suspense>
 
+      <DashboardToolbar />
+
       <Suspense fallback={<ListingsTableSkeleton />}>
-        <ListingsTable />
+        <ListingsDataWrapper />
       </Suspense>
     </div>
   );
