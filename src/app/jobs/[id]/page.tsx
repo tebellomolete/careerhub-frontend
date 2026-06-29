@@ -3,6 +3,7 @@ import Link from "next/link";
 import { JobListing } from "@/types";
 import ApplicationForm from "@/components/ApplicationForm";
 import JobStatusBadge from "@/components/JobStatusBadge";
+import { auth } from "@/auth";
 
 export default async function JobDetailPage({
   params,
@@ -11,9 +12,13 @@ export default async function JobDetailPage({
 }) {
   const { id } = await params;
 
-  const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/jobs/${id}`, {
+  const jobResPromise = fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/jobs/${id}`, {
     next: { tags: ["jobs", `job-${id}`] },
   });
+  const authPromise = auth();
+
+  const [res, session] = await Promise.all([jobResPromise, authPromise]);
+  const role = session?.user?.role;
 
   if (res.status === 404) {
     notFound();
@@ -109,7 +114,29 @@ export default async function JobDetailPage({
 
       <div className="mt-8">
         {job.isActive ? (
-          <ApplicationForm jobId={job.id} jobTitle={job.title} />
+          <>
+            {role === "employer" ? (
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 text-center dark:bg-yellow-900/30 dark:border-yellow-800">
+                <p className="text-yellow-800 dark:text-yellow-200">Employers cannot apply for jobs.</p>
+              </div>
+            ) : !session ? (
+              <div>
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6 text-center dark:bg-blue-900/30 dark:border-blue-800">
+                  <p className="text-blue-800 dark:text-blue-200">
+                    You must be signed in to apply.{" "}
+                    <Link href="/login" className="font-bold underline">
+                      Sign in here
+                    </Link>.
+                  </p>
+                </div>
+                <div className="opacity-60 pointer-events-none">
+                  <ApplicationForm jobId={job.id} jobTitle={job.title} />
+                </div>
+              </div>
+            ) : (
+              <ApplicationForm jobId={job.id} jobTitle={job.title} />
+            )}
+          </>
         ) : (
           <div className="bg-gray-50 border border-gray-200 rounded-lg p-6 text-center dark:bg-gray-900 dark:border-gray-800">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
