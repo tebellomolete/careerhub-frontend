@@ -386,3 +386,84 @@ Route (app)
 ○  (Static)   prerendered as static content
 ƒ  (Dynamic)  server-rendered on demand
 ```
+
+---
+
+# CareerHub Frontend - Assignment 2.3
+
+## Part 1: Conceptual Answers
+
+### 1. Mapping CareerHub roles to route protection rules
+Our application has two primary roles: `employer` and `candidate`. The route protection rules enforce this separation:
+- `/dashboard/*` routes are exclusively for employers. If a candidate tries to access them, they are redirected.
+- `/jobs/*` routes are public, but the application form inside them is restricted to candidates (or forces sign-in for guests). Employers are explicitly blocked from applying to jobs.
+- `/login` is protected against already authenticated users, redirecting them to their respective home pages based on their role to prevent unnecessary login attempts.
+
+### 2. The session object design
+NextAuth's default session object only includes basic information (name, email, image). We used TypeScript module augmentation in `next-auth.d.ts` to extend the `Session`, `User`, and `JWT` types to explicitly include an optional `role` string. This allows us to safely pass the user's role from the JWT token directly into the session object during the `session` callback, making `session.user.role` securely and globally accessible across our application.
+
+### 3. Choosing the state tool for job filters
+We chose URL state (via `nuqs`) for job filters instead of local React state or global Zustand state. URL state allows the filters to be shareable via a link (e.g., sending a link to a friend with `?status=open`), preserves the user's search criteria if they refresh the page, and integrates perfectly with Next.js Server Components which can read the `searchParams` directly for server-side filtering or fetching.
+
+### 4. What the nav bar knows
+The navigation bar (`NavLinks`) is a Client Component that receives the user session data as a prop. It uses this knowledge to dynamically render links. If the user is an employer, it renders the "Dashboard" link and an employer badge. If a candidate, it renders the "Jobs" link and a candidate badge. It also conditionally renders either a "Sign In" link or the authenticated user's name alongside a "Sign Out" button.
+
+## Part 12: Technical Explanations
+
+### 1. The role redirect decision
+Inside our login Server Action, we purposefully set `redirect: false` when calling NextAuth's `signIn`. This prevents NextAuth from immediately redirecting the user to a default page. Instead, it allows the Server Action to continue executing, fetch the newly created session via `auth()`, examine the user's `role`, and manually execute a Next.js `redirect()` to either `/dashboard/listings` for employers or `/jobs` for candidates.
+
+### 2. Middleware vs page-level guards
+Middleware runs at the edge *before* a request even hits the Next.js routing engine or renders a page. This makes it incredibly fast and perfect for broad, route-level protection (e.g., blocking all `/dashboard` access). Page-level guards (checking `auth()` inside a Server Component) are better for granular UI decisions, like deciding whether to render a specific button or form on a page that is otherwise public.
+
+### 3. Why URL state for job filters
+URL state acts as the ultimate "source of truth" that bridges client interactivity and server rendering. By using `nuqs`, as the user types in the search box, the URL instantly updates. Because Next.js Server Components (like our `JobsPage`) can read `searchParams`, the server instantly knows the user's filter preferences and can pre-filter the jobs array before sending the HTML to the client, combining the speed of client-side interactions with the power of server-side data processing.
+
+### 4. The async Server Component / store boundary
+Zustand is a pure Client State management tool; its hooks cannot run inside Server Components. Our `ListingsTable` required both server-fetched data and Zustand's layout preferences. We solved this boundary by extracting the data fetching into a Server Component wrapper (`ListingsDataWrapper`). This wrapper awaits the data, then passes it down as props to a thin Client Component wrapper (`DashboardClientWrapper`), which successfully reads the Zustand store and renders the final UI.
+
+### Stretch A: Defense in Depth
+Inside `ListingsTable.tsx`, we added a check to ensure `session?.user?.role === "employer"` before rendering the `CloseJobButton`. While Middleware already blocks non-employers from the dashboard, this is "Defense in Depth"—adding a secondary, component-level check to ensure that even if the middleware fails or the component is accidentally reused on a public page, unauthorized users will never even see the sensitive UI controls.
+
+### Stretch B: Zustand Persist & The Hydration Mismatch
+We used Zustand's `persist` middleware to save the dashboard layout preferences (Grid vs Table) to the browser's `localStorage`. However, `localStorage` only exists in the browser. During the initial Server Side Render (SSR), Next.js cannot read `localStorage`, so it assumes the default state (Table view) and generates HTML for a table. When that HTML reaches the browser, Zustand instantly reads `localStorage` and realizes the user actually wants Grid view. If React immediately swapped them, the UI would flash and React would throw a "Hydration Mismatch" error because the server HTML didn't match the client HTML. We fixed this by rendering a skeleton or `null` until the component confirms it has `mounted` on the client.
+
+### Final Build Output
+```text
+> careerhub-frontend@0.1.0 build
+> next build
+
+▲ Next.js 16.2.9 (Turbopack)
+- Environments: .env.local
+
+⚠ The "middleware" file convention is deprecated. Please use "proxy" instead. Learn more: https://nextjs.org/docs/messages/middleware-to-proxy
+  Creating an optimized production build ...
+✓ Compiled successfully in 2.1s
+  Running TypeScript ...
+  Finished TypeScript in 1299ms ...
+  Collecting page data using 7 workers ...
+  Generating static pages using 7 workers (0/10) ...
+  Generating static pages using 7 workers (2/10) 
+  Generating static pages using 7 workers (4/10) 
+  Generating static pages using 7 workers (7/10) 
+✓ Generating static pages using 7 workers (10/10) in 70ms
+  Finalizing page optimization ...
+
+Route (app)
+┌ ƒ /
+├ ƒ /_not-found
+├ ƒ /api/applications
+├ ƒ /api/applications/stats
+├ ƒ /api/auth/[...nextauth]
+├ ƒ /api/jobs
+├ ƒ /api/jobs/[id]
+├ ƒ /dashboard/listings
+├ ƒ /jobs
+├ ƒ /jobs/[id]
+└ ƒ /login
+
+
+ƒ Proxy (Middleware)
+
+ƒ  (Dynamic)  server-rendered on demand
+```
