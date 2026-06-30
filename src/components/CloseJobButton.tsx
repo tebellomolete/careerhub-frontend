@@ -54,14 +54,11 @@ export default function CloseJobButton({ jobId, isActive }: Props) {
 
   return (
     <AlertDialog open={open} onOpenChange={setOpen}>
-      <AlertDialogTrigger asChild>
-        <button
-          type="button"
-          disabled={isPending}
-          className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 font-medium disabled:opacity-50 ml-3"
-        >
-          Close
-        </button>
+      <AlertDialogTrigger
+        disabled={isPending}
+        className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 font-medium disabled:opacity-50 ml-3"
+      >
+        Close
       </AlertDialogTrigger>
       <AlertDialogContent>
         <AlertDialogHeader>

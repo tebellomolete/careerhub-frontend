@@ -228,10 +228,8 @@ export default function ApplicationWizard({ jobId, jobTitle, role }: Application
         <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100">Apply for {jobTitle}</h3>
         {hasDraft && (
           <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <button type="button" className="text-sm text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300">
-                Discard draft
-              </button>
+            <AlertDialogTrigger className="text-sm text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300">
+              Discard draft
             </AlertDialogTrigger>
             <AlertDialogContent>
               <AlertDialogHeader>
