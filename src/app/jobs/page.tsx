@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { JobListing } from "@/types";
 import JobLinkCard from "@/components/JobLinkCard";
 import JobFilters from "@/components/JobFilters";
@@ -74,9 +75,16 @@ export default async function JobsPage({
       
       <JobFilters />
 
-      {filteredJobs.length === 0 ? (
+      {jobs.length === 0 ? (
         <div className="text-center py-12">
-          <p className="text-gray-500 dark:text-gray-400">No jobs match your search criteria.</p>
+          <p className="text-gray-500 dark:text-gray-400">No jobs are currently listed.</p>
+        </div>
+      ) : filteredJobs.length === 0 ? (
+        <div className="text-center py-12">
+          <p className="text-gray-500 dark:text-gray-400 mb-4">No jobs match your search.</p>
+          <Link href="/jobs" className="inline-flex py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700">
+            Clear all filters
+          </Link>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
