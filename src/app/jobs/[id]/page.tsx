@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { JobListing } from "@/types";
-import ApplicationForm from "@/components/ApplicationForm";
+import ApplicationWizard from "@/components/ApplicationWizard";
 import JobStatusBadge from "@/components/JobStatusBadge";
 import { auth } from "@/auth";
 
@@ -130,11 +130,11 @@ export default async function JobDetailPage({
                   </p>
                 </div>
                 <div className="opacity-60 pointer-events-none">
-                  <ApplicationForm jobId={job.id} jobTitle={job.title} />
+                  <ApplicationWizard jobId={job.id} jobTitle={job.title} role={role} />
                 </div>
               </div>
             ) : (
-              <ApplicationForm jobId={job.id} jobTitle={job.title} />
+              <ApplicationWizard jobId={job.id} jobTitle={job.title} role={role} />
             )}
           </>
         ) : (

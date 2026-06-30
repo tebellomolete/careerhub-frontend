@@ -21,11 +21,9 @@ export interface ApplicationRequest {
   applicantName: string;
   applicantEmail: string;
   phone?: string;
-  yearsOfExperience: number;
-  coverLetter: string;
+  coverLetter?: string;
   linkedInUrl?: string;
-  availableImmediately: boolean;
-  noticePeriodWeeks?: number;
+  howDidYouHear: string;
 }
 
 export interface ApplicationResponse {
