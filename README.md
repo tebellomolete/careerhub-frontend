@@ -467,3 +467,86 @@ Route (app)
 
 ƒ  (Dynamic)  server-rendered on demand
 ```
+
+---
+
+# CareerHub Frontend - Assignment 3.1
+
+## Part 1: Conceptual Answers
+
+### 1. Draft persistence strategy
+By leveraging `localStorage`, we provide a robust auto-save feature that prevents users from losing their application progress if they accidentally close the tab or experience a browser crash. We subscribe to form changes using `form.watch()`, which constantly streams updates into `localStorage`. Upon remounting the component, we immediately check `localStorage` for a draft and restore it via `form.reset()`, providing a seamless continuation of the application process.
+
+### 2. Skeleton loader contract
+The `JobCardSkeleton` component serves as a structural placeholder for the real `JobCard` component. By closely approximating the height, padding, and text-line proportions of the real component, the skeleton prevents "Cumulative Layout Shift" (CLS)—a jarring experience where the page jumps around when the real data finally loads. This visual contract ensures the user interface remains stable and predictable during asynchronous data fetching.
+
+### 3. AlertDialog vs alternatives
+When implementing destructive actions like closing a job listing or discarding a draft, an `AlertDialog` provides a superior user experience compared to native `window.confirm()` or inline banners. Native confirmation dialogs block the entire browser thread, halt all JavaScript execution, and offer zero styling flexibility. An `AlertDialog` seamlessly integrates with the application's design system, remains non-blocking, and allows for custom messaging and visual cues (like a red, destructive action button) that clearly communicate the severity of the action.
+
+### 4. Empty state taxonomy
+Empty states are critical for providing context when no data is available. We implemented a dual-state taxonomy:
+1. **Database Empty:** If the backend returns zero jobs globally, we display a simple message indicating no jobs are available. No action is required from the user.
+2. **Search Empty:** If jobs exist but the current filters yield zero results, we provide an actionable message alongside a "Clear all filters" button. This explicitly tells the user that their constraints caused the empty state and provides a one-click escape hatch to return to the full list.
+
+## Part 6: Technical Explanations
+
+### 1. Solving AlertDialog with a Server Action
+When using the `AlertDialog` component, its content is rendered inside a React Portal (at the root of the document body). Because the portal's DOM tree is entirely separate from the component where it was invoked, placing a standard `<button type="submit">` inside the dialog fails to trigger the parent `<form>`. We solved this by using `useState` for dialog visibility and `useTransition` to programmatically execute the Server Action when the confirmation button is clicked, completely bypassing the portal DOM issue while retaining the loading state.
+
+### 2. Back button validation bypass
+In our multi-step wizard, we specifically want to prevent users from advancing to the next step if the current step contains errors. We achieve this by awaiting `form.trigger(["field1", "field2"])` when "Next" is clicked, forcing Zod validation on just those fields. However, if a user wants to go "Back" to correct a previous mistake, running validation would unfairly trap them on the current step if it was incomplete. Therefore, the "Back" button completely bypasses `form.trigger()` and simply decrements the step counter state.
+
+### 3. Skeleton count justification
+When deciding how many skeletons to render, we must consider the typical viewport size and grid layout. Our design uses a responsive grid that maxes out at 3 columns (`lg:grid-cols-3`). Rendering exactly 6 skeletons perfectly fills 2 complete rows on large screens, 3 rows on medium screens (2 columns), and provides enough content to push the footer down on mobile devices. This creates a visually balanced, complete-looking interface during the loading phase.
+
+### 4. Empty state logic placement
+The empty state logic is evaluated *after* the initial data fetch and array filtering. It is placed at the very bottom of the Server Component's execution path. This guarantees that we are checking the absolute final state of the data before returning JSX to the browser, ensuring the UI perfectly reflects the exact subset of jobs the user requested.
+
+### Stretch A: Cross-tab sync
+We implemented cross-tab synchronization for application drafts by attaching an event listener to the `window`'s `"storage"` event. The browser automatically fires this event in all other open tabs whenever `localStorage` is modified. By listening for this event and calling `form.reset()` with the new data, a user can start an application in one tab, open the job description in another tab, and immediately see their partially filled form synchronized perfectly in real-time.
+
+### Stretch B: Animated transitions
+To create a native app-like experience, we implemented CSS-only sliding transitions between wizard steps. The wizard container is set to `overflow: hidden`, and each step is absolutely positioned within it. By dynamically calculating an offset based on the current step (`translateX(${(stepNumber - step) * 100}%)`), the active step smoothly slides into the `0%` center position, while inactive steps are pushed off-screen to either `-100%` or `100%`.
+
+### Stretch C: LinkedIn Preview
+We enhanced the application wizard by providing a live, best-effort preview of the user's LinkedIn profile. We parse the entered URL to extract the profile slug, and construct an `<img>` tag pointing to `https://avatar.vercel.sh/{slug}`. We leverage the native `onError` attribute to gracefully hide the image (`e.currentTarget.style.display = 'none'`) if the user inputs an invalid slug or the avatar service fails, ensuring a broken image icon never disrupts the UI.
+
+### Final Build Output
+```text
+> careerhub-frontend@0.1.0 build
+> next build
+
+▲ Next.js 16.2.9 (Turbopack)
+- Environments: .env.local
+
+⚠ The "middleware" file convention is deprecated. Please use "proxy" instead. Learn more: https://nextjs.org/docs/messages/middleware-to-proxy
+  Creating an optimized production build ...
+✓ Compiled successfully in 2.1s
+  Running TypeScript ...
+  Finished TypeScript in 1550ms ...
+  Collecting page data using 7 workers ...
+  Generating static pages using 7 workers (0/10) ...
+  Generating static pages using 7 workers (2/10) 
+  Generating static pages using 7 workers (4/10) 
+  Generating static pages using 7 workers (7/10) 
+✓ Generating static pages using 7 workers (10/10) in 79ms
+  Finalizing page optimization ...
+
+Route (app)
+┌ ƒ /
+├ ƒ /_not-found
+├ ƒ /api/applications
+├ ƒ /api/applications/stats
+├ ƒ /api/auth/[...nextauth]
+├ ƒ /api/jobs
+├ ƒ /api/jobs/[id]
+├ ƒ /dashboard/listings
+├ ƒ /jobs
+├ ƒ /jobs/[id]
+└ ƒ /login
+
+
+ƒ Proxy (Middleware)
+
+ƒ  (Dynamic)  server-rendered on demand
+```
