@@ -6,6 +6,7 @@ import { Providers } from "./providers";
 import NavLinks from "@/components/NavLinks";
 import Link from "next/link";
 import { auth } from "@/auth";
+import { Toaster } from "sonner";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -50,6 +51,7 @@ export default async function RootLayout({
           <Providers>
             {children}
           </Providers>
+          <Toaster position="bottom-right" richColors />
         </div>
       </body>
     </html>
